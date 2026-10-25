@@ -1,0 +1,22 @@
+# .dockerignore — keep build contexts small and the image secret-free.
+node_modules
+**/node_modules
+dist
+**/dist
+.venv
+**/.venv
+__pycache__
+**/__pycache__
+.pytest_cache
+.ruff_cache
+.env
+**/.env
+.env.*
+**/.env.*
+!**/.env.example
+.git
+phase6_shots
+phase7_shots
+data/generated
+apps/api/.tuning_tmp
+infra/config/.tuning_tmp

@@ -1,0 +1,140 @@
+# frozen v1.0 — see docs/TUNING.md (Phase 07: 12 measured iterations, targets
+# PASS on defaults; legitimacy guards are load-bearing — degradation row removed
+# them and FPR climbed to 0.20; DO NOT retune without a full journal iteration)
+# =============================================================================
+# InsiderLens — rules.yaml  (PROJECT LAW: every threshold/weight/window lives here)
+# Validated at API startup by app/services/rules_config.py (fail-fast: a missing
+# key CRASHES the boot naming the key). The engine (Phase 03/04) reads ONLY from
+# here — no magic numbers in rule code ever.
+#
+# Values are blueprint defaults, mirrored from the Phase 01 generator config so
+# planted scenarios are detectable and legitimate traps (L1-L5) survive.
+# Tune ONLY via this file + measurement (Phase 07), never by editing constants.
+# =============================================================================
+
+thresholds:
+  review_band: 50000          # ₹ — internal review trigger (structuring leg sits just below)
+  reporting_band: 1000000     # ₹ — CTR-style reporting trigger
+
+  # T1 circular funds flow: money loops back, shrinking per hop (S1, S2, S5-cycle)
+  t1_circular:
+    window_days: 10           # max span from first to last leg of a cycle
+    min_retention: 0.70       # final-leg/seed ratio floor (L2 triangle stays safe: span > window)
+    min_len: 3                # smallest cycle to report
+    max_len: 6                # largest cycle to report
+    min_leg_amount: 40000     # ₹ — ring legs below structuring band are noise (prunes random p2p 3-cycles)
+
+  # T2 structuring: repeated sub-review-band amounts (S3's 17 deposits; S2 ring shows under T1)
+  t2_structuring:
+    band_lo: 45000            # ₹ — "just under" zone start
+    band_hi: 49999.99         # ₹ — must stay strictly below review_band
+    band2_lo: 800000          # ₹ — optional second (large-report) band; empty = unused
+    band2_hi: 999999
+    min_count: 5              # sub-band txns within window (per sender, or per pair)
+    window_days: 7
+
+  # T3 fan-in -> bulk out: many senders (sub-threshold) then one fat transfer (S3)
+  t3_fanin:
+    min_in_degree: 8          # distinct senders within window
+    window_days: 5
+    leg_min_amount: 40000     # inbound legs must be >= this — smurfs deposit near-band
+                              # chunks, background churn is median ~Rs6k (engine run P03-1)
+    sub_threshold_fraction: 0.8   # >=80% of in-edges must be below review_band
+    bulk_out_multiple: 5      # outgoing bulk >= 5x median in-amount
+    bulk_window_hours: 48     # bulk must trail the fan-in window by this much
+
+  # T4 pass-through / high-turnover mule (S4; L4 stays safe at occurrences < 3)
+  t4_passthrough:
+    forward_ratio: 0.80       # dominant single outflow >= 80% of a matched inflow
+    window_hours: 48
+    min_occurrences: 5        # 3 catches churn noise in this bundle (run P03-2); 5 is S4-scale
+    max_kept_fraction: 0.12   # account keeps < 12% of total inflow
+    max_fraction_std: 0.10    # corridor discipline: matched-fraction std must be TIGHT
+                              # (S4 = 0.017; background churn min measured = 0.279 — 16x margin)
+    min_route_share: 0.5      # matched forwards must concentrate on one next-hop
+                              # (S4 = 1.0; background churn max measured = 0.38)
+
+  # T5 dormant reactivation: long silence then burst (S6; S5 target is ACTIVE — must NOT fire)
+  t5_dormant:
+    dormant_days: 180         # no activity for at least this long (history-gap path)
+    burst_amount: 50000       # ₹ — wake amount that counts
+    burst_window_hours: 72    # burst must land within 72h of first wake txn
+    # 60-day snapshots cannot OBSERVE a 180-day gap from txns alone — the bank's own
+    # DORMANT marker plus this much silence at window start is the dormancy authority.
+    window_silence_days: 30
+
+  # T6 income-profile mismatch: volume >> declared income (S7)
+  t6_profile:
+    multiple: 25              # monthly NON-exempt volume > 25x declared monthly income.
+                              # Engine run P03-1: synthetic background churn tops out at
+                              # ~24.8x/month for incomes >= floor; S7 sustains 56-76x.
+                              # 6x was far too loose for this kind of dataset (554 hits).
+    min_months: 2             # mismatch must persist across >=2 calendar months
+                              # (L3 lesson generalized: one-off spikes are usually legit)
+    lookback_days: 30
+    min_income_floor: 25000   # ₹ — below this, volume ratios are too noisy to mean anything
+
+  # E1 off-hours sensitive ops (22:00-06:00 IST wall clock -> stored UTC; S5 night batch)
+  e1_offhours:
+    night_start_hour_ist: 22
+    night_end_hour_ist: 6
+    sensitive_actions: [KYC_EDIT, LIMIT_INCREASE, DISABLE_ALERT, ADD_BENEFICIARY, BULK_EXPORT]
+
+  # E2 role violation (no config keys: roles.allowed_actions is the source of truth)
+
+  # E3 bulk-access spike: personal AND peer baselines must BOTH be beaten.
+  # Law: an officer who always views a lot is not spiking — spike = vs HIS own
+  # norm AND his same-role peers' norm (min_day_count guards near-zero baselines).
+  e3_spike:
+    lookback_days: 30         # personal median window
+    personal_multiple: 3.0    # day count > 3x own 30d median views
+    peer_multiple: 3.0        # day count > 3x same-role peers' median views/day
+    min_day_count: 5          # hard floor — a 0-median baseline can't fabricate a spike
+
+  # E4 high-risk config change (single action — context decides escalation)
+  e4_highrisk:
+    actions: [DISABLE_ALERT, LIMIT_INCREASE, KYC_EDIT]
+
+  # E5 burst of sensitive actions by one employee (uses e1_offhours.sensitive_actions)
+  e5_burst:
+    window_hours: 24
+    min_actions: 4
+
+scoring:
+  # base points per rule hit — Phase 04 may RETUNE, but only in this file
+  base_points:
+    T1: 40
+    T2: 30
+    T3: 35
+    T4: 30
+    T5: 25
+    T6: 30
+    E1: 10
+    E2: 20
+    E3: 10
+    E4: 15
+    E5: 15
+    F1: 25
+    F2: 20
+    F3: 10
+  modifiers:
+    amount_gt_5l: 10          # any leg > ₹5L
+    cross_branch: 10          # pattern spans >1 branch (or employee != account branch)
+    repeat_pattern: 10        # entity appeared in a previous run's alert
+    shared_contact_cluster: 10  # entity customers share phone/address (S3 mules)
+  params:
+    amount_gt_5l_threshold: 500000   # ₹ the "any leg > ₹5L" amount line
+  bands:                      # merged score -> band (LOW below MEDIUM)
+    MEDIUM: 40
+    HIGH: 70
+    CRITICAL: 90
+
+fusion:
+  window_hours: 72            # F1: employee action <-> pattern start correlation window
+  f1_txn_rules: [T1, T2, T3, T5]   # which T-rules F1 correlates against (spec §3.2)
+  max_rules_per_alert: 6      # merger cap; extras become related_alerts links
+  max_entities_per_alert: 20  # split mega-blobs at weakest temporal link
+
+legitimacy_guards:
+  # purposes that NEVER feed rule volume math (learned from L1/L3/L4/L5 traps)
+  exempt_purposes: [SALARY, BONUS, PROPERTY, HOSPITAL, VENDOR_PAYMENT, SERVICES, EMERGENCY]

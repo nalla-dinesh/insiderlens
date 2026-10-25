@@ -1,0 +1,5 @@
+emp_id,name,role,branch,join_date,status
+1008,Ritu Pillai,TELLER,Pune-Main,2025-01-01,ACTIVE
+1009,Karan Shinde,TELLER,Pune-Main,2023-01-20,ACTIVE
+1010,Prisha Deshpande,TELLER,Pune-Main,2025-01-08,ACTIVE
+1011,Meera Verma,OFFICER,Pune-Main,2024-12-22,ACTIVE

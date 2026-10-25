@@ -1,0 +1,37 @@
+{
+  "seed": 42,
+  "days": 60,
+  "start_date": "2026-07-01",
+  "built_at": "2026-10-24T12:12:01.225211+00:00",
+  "note": "CI fixture: first-500 chronological txns of seed-42 bundle.",
+  "files": {
+    "accounts": {
+      "rows": 500,
+      "sha256": "a505465aeaf8e02646a53c38453152f5836934c2ef6dab9773359d75e5ebd3f7"
+    },
+    "activity_log": {
+      "rows": 120,
+      "sha256": "056bfa086d7515d7e762fc39caccb5c4e39612edef53f537d37e640e835817b2"
+    },
+    "customers": {
+      "rows": 500,
+      "sha256": "2b358f6591389baf83efabaa06217aaeb290a2bc6b68c9d2b1855418c7ae7f20"
+    },
+    "employees": {
+      "rows": 4,
+      "sha256": "844113f20508c30abe974bf9c197c9e6c77a7f3f3c4ef42b6e0095e61c235bb9"
+    },
+    "ground_truth": {
+      "rows": 0,
+      "sha256": "0b36b10bc96cf3207a9c0160638882f84556374dc3c6bb17a200871617d80e83"
+    },
+    "roles": {
+      "rows": 4,
+      "sha256": "242cad1289b9c904b229d53b01e35afc451b55869ffb295e8edb816f14f6f1dd"
+    },
+    "transactions": {
+      "rows": 500,
+      "sha256": "6549505cfa1967705588c780f08b9df5b775089c41873ca09b1146f8f17b42b3"
+    }
+  }
+}

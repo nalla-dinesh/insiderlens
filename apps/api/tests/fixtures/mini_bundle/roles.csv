@@ -1,0 +1,5 @@
+role_name,allowed_actions,description
+TELLER,APPROVE_TXN|LOGIN|VIEW_ACCOUNT,Front-line: views and transaction approvals within own branch
+OFFICER,ADD_BENEFICIARY|APPROVE_TXN|KYC_EDIT|LOGIN|VIEW_ACCOUNT,KYC maintenance and beneficiary operations
+MANAGER,ADD_BENEFICIARY|APPROVE_TXN|BULK_EXPORT|KYC_EDIT|LIMIT_INCREASE|LOGIN|VIEW_ACCOUNT,"Limits, bulk exports, branch supervision"
+ADMIN,ADD_BENEFICIARY|APPROVE_TXN|BULK_EXPORT|DISABLE_ALERT|KYC_EDIT|LIMIT_INCREASE|LOGIN|VIEW_ACCOUNT,Alert configuration and system administration

@@ -1,0 +1,90 @@
+# InsiderLens — final compose shape (Phase 08).
+#
+#   docker compose -f infra/docker-compose.yml up -d db api        # dev stack
+#   docker compose -f infra/docker-compose.yml up -d --build       # + web (:8080)
+#   docker compose -f infra/docker-compose.yml --profile demo up --build -d
+#                                                                 # ... + one-shot
+#                                                                 seeder (seed-42
+#                                                                 bundle + analysis
+#                                                                 run)
+#
+# Memory budget targets a 512 MB free-tier host: 1 uvicorn worker, no access log.
+
+name: insiderlens
+
+x-api-env: &api-env
+  ENV: development                  # dev stack; production hardening flips this
+  DATABASE_URL: postgresql+asyncpg://insider:insider@db:5432/insiderlens
+  RULES_CONFIG: /app/config/rules.yaml
+  CORS_ORIGINS: http://localhost:5173,http://localhost:8080
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: insiderlens-db
+    environment:
+      POSTGRES_USER: insider
+      POSTGRES_PASSWORD: insider
+      POSTGRES_DB: insiderlens
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U insider -d insiderlens"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    container_name: insiderlens-api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      <<: *api-env
+      RUN_MIGRATIONS: "1"            # one-shot schema on first boot (pitfall P5 doc)
+    ports:
+      - "8000:8000"
+    volumes:
+      - bundle_data:/bundle          # demo: seeder extracts the bundle here (shared)
+    # API image ships a HEALTHCHECK of its own — compose rides on it.
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    container_name: insiderlens-web
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "8080:80"
+
+  # ---------------- DEMO PROFILE (spec §3) ----------------
+  # `docker compose --profile demo up` additionally runs this one-shot seed:
+  # unpacks the committed gzip bundle (956 KB — NOT 50k raw CSVs, pitfall P4),
+  # ingests it through the REAL ingestion endpoint, then fires one analysis run.
+  seeder:
+    profiles: ["demo"]
+    build:
+      context: ..
+      dockerfile: infra/seeder/Dockerfile
+    container_name: insiderlens-seeder
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      API_BASE: http://api:8000
+      SEED_DIR: /seedwork             # its own view of the shared volume
+      API_DATA_DIR: /bundle           # what the API container sees
+    volumes:
+      - bundle_data:/seedwork
+    restart: "no"
+
+volumes:
+  pg_data:
+  bundle_data:

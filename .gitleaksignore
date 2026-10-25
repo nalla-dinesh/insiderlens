@@ -1,0 +1,5 @@
+# Phase 08 pass — two hand-reviewed FALSE POSITIVES.
+# Engine evidence reasons embed rule-key literals (e.g. {"key": "t1_*"})
+# — those are rule names, not secrets. Fingerprints only, no payloads here.
+apps/api/app/engine/rules_txn.py:generic-api-key:157
+apps/api/app/engine/rules_txn.py:generic-api-key:510

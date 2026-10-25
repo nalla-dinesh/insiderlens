@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=70"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "insiderlens-api"
+version = "0.1.0"
+description = "InsiderLens API — explainable graph-based financial-crime investigation platform"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.120",
+    "uvicorn[standard]>=0.30",
+    "sqlalchemy[asyncio]>=2.0.31",
+    "asyncpg>=0.29",
+    "alembic>=1.13",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.4",
+    "PyYAML>=6.0.1",
+    "structlog>=24.1.0",
+    "pandas>=2.2",
+    "networkx>=3.2",
+    "reportlab>=4.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2",
+    "pytest-asyncio>=0.23",
+    "httpx>=0.27",
+    "ruff==0.15.7",
+    "pypdf>=4.3",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
